@@ -517,7 +517,7 @@ void
 	/*	get the master colors	*/
 	LSE_master_colors_max_min( &enc_c0, &enc_c1, channels, uncompressed );
 	/*	store the 565 color 0 and color 1	*/
-	compressed[0] = (enc_c0 >> 0) & 255;
+	compressed[0] =  enc_c0       & 255;
 	compressed[1] = (enc_c0 >> 8) & 255;
 	compressed[2] = (enc_c1 >> 0) & 255;
 	compressed[3] = (enc_c1 >> 8) & 255;

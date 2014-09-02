@@ -83,14 +83,14 @@ static int dds_test(stbi *s)
 	return 1;
 }
 #ifndef STBI_NO_STDIO
-int      stbi_dds_test_file        (FILE *f)
-{
-   stbi s;
-   int r,n = ftell(f);
-   start_file(&s,f);
-   r = dds_test(&s);
-   fseek(f,n,SEEK_SET);
-   return r;
+int stbi_dds_test_file(FILE *f) {
+    stbi s;
+    int r;
+    long n = ftell(f);
+    start_file(&s,f);
+    r = dds_test(&s);
+    fseek(f,n,SEEK_SET);
+    return r;
 }
 #endif
 

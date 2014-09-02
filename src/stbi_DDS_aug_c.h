@@ -406,7 +406,6 @@ static stbi_uc *dds_load(stbi *s, int *x, int *y, int *comp, int req_comp)
 	} else
 	{
 		/*	uncompressed	*/
-		DXT_family = 0;
 		s->img_n = 3;
 		if( has_alpha )
 		{

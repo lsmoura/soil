@@ -497,81 +497,75 @@ void LSE_master_colors_max_min(
 	}
 }
 
-void
-	compress_DDS_color_block
-	(
-		int channels,
-		const unsigned char *const uncompressed,
-		unsigned char compressed[8]
-	)
-{
-	/*	variables	*/
-	int i;
-	int next_bit;
-	int enc_c0, enc_c1;
-	int c0[4], c1[4];
-	float color_line[] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	float vec_len2 = 0.0f, dot_offset = 0.0f;
-	/*	stupid order	*/
-	int swizzle4[] = { 0, 2, 3, 1 };
-	/*	get the master colors	*/
-	LSE_master_colors_max_min( &enc_c0, &enc_c1, channels, uncompressed );
-	/*	store the 565 color 0 and color 1	*/
-	compressed[0] =  enc_c0       & 255;
-	compressed[1] = (enc_c0 >> 8) & 255;
-	compressed[2] = (enc_c1 >> 0) & 255;
-	compressed[3] = (enc_c1 >> 8) & 255;
-	/*	zero out the compressed data	*/
-	compressed[4] = 0;
-	compressed[5] = 0;
-	compressed[6] = 0;
-	compressed[7] = 0;
-	/*	reconstitute the master color vectors	*/
-	rgb_888_from_565( enc_c0, &c0[0], &c0[1], &c0[2] );
-	rgb_888_from_565( enc_c1, &c1[0], &c1[1], &c1[2] );
-	/*	the new vector	*/
-	vec_len2 = 0.0f;
-	for( i = 0; i < 3; ++i )
-	{
-		color_line[i] = (float)(c1[i] - c0[i]);
-		vec_len2 += color_line[i] * color_line[i];
-	}
-	if( vec_len2 > 0.0f )
-	{
-		vec_len2 = 1.0f / vec_len2;
-	}
-	/*	pre-proform the scaling	*/
-	color_line[0] *= vec_len2;
-	color_line[1] *= vec_len2;
-	color_line[2] *= vec_len2;
-	/*	compute the offset (constant) portion of the dot product	*/
-	dot_offset = color_line[0]*c0[0] + color_line[1]*c0[1] + color_line[2]*c0[2];
-	/*	store the rest of the bits	*/
-	next_bit = 8*4;
-	for( i = 0; i < 16; ++i )
-	{
-		/*	find the dot product of this color, to place it on the line
-			(should be [-1,1])	*/
-		int next_value = 0;
-		float dot_product =
-			color_line[0] * uncompressed[i*channels+0] +
-			color_line[1] * uncompressed[i*channels+1] +
-			color_line[2] * uncompressed[i*channels+2] -
-			dot_offset;
-		/*	map to [0,3]	*/
-		next_value = (int)( dot_product * 3.0f + 0.5f );
-		if( next_value > 3 )
-		{
-			next_value = 3;
-		} else if( next_value < 0 )
-		{
-			next_value = 0;
-		}
-		/*	OK, store this value	*/
-		compressed[next_bit >> 3] |= swizzle4[ next_value ] << (next_bit & 7);
-		next_bit += 2;
-	}
-	/*	done compressing to DXT1	*/
+void compress_DDS_color_block(int channels, const unsigned char *const uncompressed, unsigned char compressed[8]) {
+    int i;
+    int next_bit;
+    int enc_c0 = 0;
+    int enc_c1 = 0;
+    int c0[4], c1[4];
+    float color_line[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    float vec_len2 = 0.0f, dot_offset = 0.0f;
+    
+    int swizzle4[] = { 0, 2, 3, 1 };
+    /*	get the master colors	*/
+    LSE_master_colors_max_min( &enc_c0, &enc_c1, channels, uncompressed );
+    /*	store the 565 color 0 and color 1	*/
+    compressed[0] =  enc_c0       & 255;
+    compressed[1] = (enc_c0 >> 8) & 255;
+    compressed[2] =  enc_c1       & 255;
+    compressed[3] = (enc_c1 >> 8) & 255;
+    /*	zero out the compressed data	*/
+    compressed[4] = 0;
+    compressed[5] = 0;
+    compressed[6] = 0;
+    compressed[7] = 0;
+    /*	reconstitute the master color vectors	*/
+    rgb_888_from_565( enc_c0, &c0[0], &c0[1], &c0[2] );
+    rgb_888_from_565( enc_c1, &c1[0], &c1[1], &c1[2] );
+    /*	the new vector	*/
+    vec_len2 = 0;
+    for (i = 0; i < 3; ++i) {
+        color_line[i] = (float)(c1[i] - c0[i]);
+        vec_len2 += color_line[i] * color_line[i];
+    }
+    
+    if (vec_len2 > 0) {
+        vec_len2 = 1.0f / vec_len2;
+    }
+    /*	pre-proform the scaling	*/
+    color_line[0] *= vec_len2;
+    color_line[1] *= vec_len2;
+    color_line[2] *= vec_len2;
+    /*	compute the offset (constant) portion of the dot product	*/
+    dot_offset =
+        color_line[0] * c0[0] +
+        color_line[1] * c0[1] +
+        color_line[2] * c0[2];
+    
+    /*	store the rest of the bits	*/
+    next_bit = 8 * 4;
+    for (i = 0; i < 16; ++i) {
+        /*	find the dot product of this color, to place it on the line
+         (should be [-1,1])	*/
+        int next_value = 0;
+        float dot_product =
+            color_line[0] * uncompressed[i*channels+0] +
+            color_line[1] * uncompressed[i*channels+1] +
+            color_line[2] * uncompressed[i*channels+2] -
+            dot_offset;
+        /*	map to [0,3]	*/
+        next_value = (int)( dot_product * 3.0f + 0.5f );
+        if (next_value > 3) {
+            next_value = 3;
+        }
+        else if (next_value < 0) {
+            next_value = 0;
+        }
+        /* OK, store this value */
+        compressed[next_bit >> 3] |= swizzle4[ next_value ] << (next_bit & 7);
+        next_bit += 2;
+    }
+    /*	done compressing to DXT1	*/
 }
 
 void
